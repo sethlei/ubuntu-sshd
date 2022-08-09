@@ -15,27 +15,26 @@ RUN apt-get update --yes && \
     # for latex labels
     cm-super \
     dvipng \
+    wget \ 
+    git \
+    openssh-server \
+    python3.10-venv \
     # for matplotlib anim
     ffmpeg && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
-
+RUN apt-get install -y 
 # USER ${NB_UID}
 
 ENV CONDA_DIR /opt/conda
-RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
-     /bin/bash ~/miniconda.sh -b -p /opt/conda
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /miniconda.sh --no-check-certificate
+RUN chmod +x /miniconda.sh   
+RUN /bin/bash /miniconda.sh -b -p /opt/conda
 ENV PATH=$CONDA_DIR/bin:$PATH
 #Install mamba
 RUN conda install mamba -n base -c conda-forge
 
 # Install Python 3 packages
-RUN arch=$(uname -m) && \
-    if [ "${arch}" == "aarch64" ]; then \
-        # Prevent libmamba from sporadically hanging on arm64 under QEMU
-        # <https://github.com/mamba-org/mamba/issues/1611>
-        export G_SLICE=always-malloc; \
-    fi && \
-    mamba install --quiet --yes \
+RUN mamba install --quiet --yes \
     'altair' \
     'beautifulsoup4' \
     'bokeh' \
@@ -81,16 +80,18 @@ RUN arch=$(uname -m) && \
     'flask'\
     'xarray'\
     'xlrd' && \
-    mamba clean --all -f -y && \
-    fix-permissions "${CONDA_DIR}" 
+    mamba clean --all -f -y 
+    #&& \fix-permissions "${CONDA_DIR}" 
     # && \fix-permissions "/home/${NB_USER}"
 
 # Install facets which does not have a pip or conda package at the moment
 WORKDIR /tmp
+RUN git config --global http.sslverify "false"
 RUN git clone https://github.com/PAIR-code/facets.git && \
     jupyter nbextension install facets/facets-dist/ --sys-prefix && \
-    rm -rf /tmp/facets && \
-    fix-permissions "${CONDA_DIR}"
+    rm -rf /tmp/facets 
+    #&& \
+    #fix-permissions "${CONDA_DIR}"
     #  && \
     # fix-permissions "/home/${NB_USER}"
 
@@ -102,9 +103,6 @@ RUN git clone https://github.com/PAIR-code/facets.git && \
    
 RUN pip install python-congress 
 
-
-
-RUN apt-get install -y openssh-server python3.10-venv
 RUN mkdir /var/run/sshd
 
 RUN echo 'root:root' |chpasswd
