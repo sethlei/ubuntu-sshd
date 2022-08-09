@@ -21,6 +21,9 @@ RUN apt-get update --yes && \
 
 # USER ${NB_UID}
 
+#Install mamba
+RUN conda install mamba -n base -c conda-forge
+
 # Install Python 3 packages
 RUN arch=$(uname -m) && \
     if [ "${arch}" == "aarch64" ]; then \
